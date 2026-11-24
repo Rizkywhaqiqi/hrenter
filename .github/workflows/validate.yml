@@ -10,12 +10,14 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: mysql://ci:ci@localhost:3306/hrenter_ci
+      DB_HOST: localhost
+      DB_USER: ci
+      DB_NAME: hrenter_ci
+      DB_SSL_MODE: disabled
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
       - run: npm install
-      - run: npm run prisma:validate
       - run: npm run typecheck
       - run: npm run build

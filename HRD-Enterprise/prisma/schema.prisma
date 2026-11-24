@@ -24,6 +24,8 @@ model Company {
 
   @@index([code])
   @@map("companies")
+  employees Employee[]
+  userCompanyAccess UserCompanyAccess[]
 }
 
 model Brand {
@@ -39,6 +41,8 @@ model Brand {
 
   @@index([code])
   @@map("brands")
+  employees Employee[]
+  userBrandAccess UserBrandAccess[]
 }
 
 model CompanyBrand {
@@ -74,6 +78,9 @@ model Outlet {
   @@index([companyId])
   @@index([brandId])
   @@index([companyId, brandId])
+  @@map("outlets")
+  userOutletAccess UserOutletAccess[]
+}
 
 model Department {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -87,8 +94,6 @@ model Department {
 
   @@index([code])
   @@map("departments")
-}
-  @@map("outlets")
 }
 
 model Position {
@@ -129,6 +134,21 @@ model Employee {
   positionId      String?  @db.Char(36) @map("position_id")
   supervisorId    String?  @db.Char(36) @map("supervisor_id")
   createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  company Company @relation(fields: [companyId], references: [id])
+  brand Brand @relation(fields: [brandId], references: [id])
+  outlet Outlet @relation(fields: [outletId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+  position Position? @relation(fields: [positionId], references: [id])
+  supervisor Employee? @relation("Supervisor", fields: [supervisorId], references: [id])
+  supervisees Employee[] @relation("Supervisor")
+  userProfiles UserProfile[]
+  @@index([employeeCode])
+  @@index([companyId])
+  @@index([brandId])
+  @@index([outletId])
+  @@map("employees")
+}
 
 model User {
   id            String   @id @default(uuid()) @db.Char(36)
@@ -147,6 +167,8 @@ model User {
   userOutletAccess  UserOutletAccess[]
 
   @@unique([email])
+  @@map("users")
+}
 
 model UserProfile {
   id         String   @id @default(uuid()) @db.Char(36)
@@ -162,9 +184,6 @@ model UserProfile {
 
   @@map("user_profiles")
 }
-  @@index([email])
-  @@map("users")
-}
 
 model AppRole {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -179,8 +198,6 @@ model AppRole {
   @@unique([code])
   @@map("app_roles")
 }
-  updatedAt       DateTime @updatedAt @map("updated_at")
-
 
 model AppPermission {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -194,9 +211,6 @@ model AppPermission {
   @@unique([code])
   @@map("app_permissions")
 }
-  company     Company     @relation(fields: [companyId], references: [id])
-  brand       Brand       @relation(fields: [brandId], references: [id])
-  outlet      Outlet      @relation(fields: [outletId], references: [id])
 
 model RolePermission {
   id           String   @id @default(uuid()) @db.Char(36)
@@ -210,9 +224,6 @@ model RolePermission {
   @@unique([roleId, permissionId])
   @@map("role_permissions")
 }
-  department  Department? @relation(fields: [departmentId], references: [id])
-  position    Position?   @relation(fields: [positionId], references: [id])
-  supervisor  Employee?   @relation("Supervisor", fields: [supervisorId], references: [id])
 
 model UserRole {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -226,9 +237,6 @@ model UserRole {
   @@unique([userId, roleId])
   @@map("user_roles")
 }
-  supervisees Employee[]  @relation("Supervisor")
-  userProfile UserProfile?
-
 
 model UserPermission {
   id          String   @id @default(uuid()) @db.Char(36)
@@ -244,7 +252,6 @@ model UserPermission {
   @@unique([userId, permissionId])
   @@map("user_permissions")
 }
-  @@index([employeeCode])
 
 model UserCompanyAccess {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -258,9 +265,6 @@ model UserCompanyAccess {
   @@unique([userId, companyId])
   @@map("user_company_access")
 }
-  @@index([companyId])
-  @@index([brandId])
-  @@index([outletId])
 
 model UserBrandAccess {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -273,8 +277,6 @@ model UserBrandAccess {
 
   @@unique([userId, brandId])
   @@map("user_brand_access")
-}
-  @@map("employees")
 }
 
 model UserOutletAccess {

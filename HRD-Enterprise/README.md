@@ -1,43 +1,18 @@
-# HRD Enterprise MVP
+# HRD Enterprise
 
-MVP awal HRD Enterprise: Next.js + Supabase.
+Next.js 15, React 19, TypeScript, Prisma 6, MySQL (Aiven).
 
-## Sudah tersedia
-- Login
-- Dashboard
-- Master Company
-- Master Brand
-- Master Outlet
-- Master Department
-- Master Position
-- Master Karyawan
-- User Management dasar
-- Pembuatan user baru dari server
+## Local setup
+1. Use Node.js 22. Run commands inside `HRD-Enterprise`.
+2. Copy `.env.example` to `.env` and configure DATABASE_URL (use database `db_jojogrp` for the existing Aiven service, not for isolated development tests) and a random JWT_SECRET of at least 32 bytes (e.g. openssl rand -hex 32).
+3. Run `npm install`, `npm run prisma:validate`, `npm run typecheck`, then `npm run dev`.
+4. For a new empty development database only, review the schema and create a migration using `npm run prisma:migrate -- --name init`. For an existing database, inspect schema drift and establish a migration baseline first. Never reset the production database.
 
-## Arsitektur akses
-User -> Role -> Permission -> Company/Brand/Outlet Access
+## Vercel
+Set Root Directory to HRD-Enterprise and Framework to Next.js. Configure DATABASE_URL and JWT_SECRET as server-side environment variables. Rotate any previous JWT secret and verify Aiven TLS using its CA instructions. Build command: npm run build. Do not run migrations automatically at build time.
 
-SUPER_ADMIN adalah administrator aplikasi pertama.
-OWNER tidak diberi akses otomatis dan nanti diatur melalui User Management.
+## Security
+SUPER_ADMIN is the only system administrator; other users require permissions and explicit access scopes. Production release requires testing tenant isolation, login throttling, and all CRUD routes. Legacy SQL in sql/ targets PostgreSQL/Supabase and must not be executed against MySQL. No default admin credentials are supplied.
 
-## Environment Variables
-Buat `.env.local` atau isi Environment Variables di Vercel:
-
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-
-SERVICE ROLE KEY WAJIB hanya di server/Vercel. Jangan masukkan ke GitHub.
-
-## Menjalankan lokal
-npm install
-npm run dev
-
-## Deploy
-Upload folder project ini ke GitHub, lalu import repository tersebut ke Vercel.
-Tambahkan 3 environment variables di atas sebelum deploy.
-
-## Super Admin pertama
-1. Supabase > Authentication > Users > Add user.
-2. Ambil UUID user.
-3. Jalankan `sql/01_first_superadmin.sql` setelah mengganti UUID.
+## Status
+Foundation cleanup is under review. Do not deploy to production until build, access-control and database compatibility checks pass.

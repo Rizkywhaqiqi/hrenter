@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/api";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
+import { isSystemAdmin } from "@/lib/permissions";
 
-async function auth(permission: string) {
+async function authorize(permission: string) {
   const session = await requirePermission(permission);
   if (session.error) return { error: session.error, status: session.status || 403 };
+  if (!(await isSystemAdmin(session.userId!))) return { error: "Forbidden", status: 403 };
   return { user: { id: session.userId } };
 }
 
 export async function GET() {
-  const auth = await auth("user.view");
+  const auth = await authorize("user.view");
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status || 403 });
   const users = await db.user.findMany({
     include: {
@@ -31,7 +33,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await auth("user.create");
+  const auth = await authorize("user.create");
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status || 403 });
   const body = await req.json();
   const email = String(body.email || "").trim().toLowerCase();

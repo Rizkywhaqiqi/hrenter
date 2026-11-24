@@ -3,9 +3,11 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { db } from "./db";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "default-secret-change-me"
-);
+function jwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || new TextEncoder().encode(secret).length < 32) throw new Error("JWT_SECRET must be at least 32 bytes");
+  return new TextEncoder().encode(secret);
+}
 const COOKIE_NAME = "hrd_session";
 const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
@@ -28,7 +30,7 @@ export async function signToken(payload: {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(jwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<{
@@ -36,7 +38,8 @@ export async function verifyToken(token: string): Promise<{
   email: string;
 } | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, jwtSecret(), { algorithms: ["HS256"] });
+    if (typeof payload.userId !== "string" || typeof payload.email !== "string") return null;
     return {
       userId: String(payload.userId),
       email: String(payload.email),
@@ -53,7 +56,11 @@ export async function getSession(): Promise<{
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  const session = await verifyToken(token);
+  if (!session) return null;
+  const user = await db.user.findUnique({ where: { id: session.userId }, include: { userProfile: true } });
+  if (!user?.isActive || user.userProfile?.isActive === false) return null;
+  return { userId: user.id, email: user.email };
 }
 
 export async function setSessionCookie(token: string): Promise<void> {
@@ -83,11 +90,11 @@ export async function login(email: string, password: string): Promise<{
   token: string;
 } | null> {
   const user = await db.user.findUnique({
-    where: { email },
+    where: { email: email.trim().toLowerCase() },
     include: { userProfile: true },
   });
 
-  if (!user || !user.isActive) return null;
+  if (!user || !user.isActive || user.userProfile?.isActive === false) return null;
 
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) return null;

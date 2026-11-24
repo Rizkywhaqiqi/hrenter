@@ -2,7 +2,7 @@ import { db } from "./db";
 
 export async function isSystemAdmin(userId: string): Promise<boolean> {
   const userRole = await db.userRole.findFirst({
-    where: { userId },
+    where: { userId, role: { code: "SUPER_ADMIN", isActive: true }, user: { isActive: true } },
     include: { role: true },
   });
   return userRole?.role.code === "SUPER_ADMIN" && userRole.role.isActive;
@@ -12,6 +12,8 @@ export async function hasPermission(
   userId: string,
   permissionCode: string
 ): Promise<boolean> {
+  const user = await db.user.findUnique({ where: { id: userId }, include: { userProfile: true } });
+  if (!user?.isActive || user.userProfile?.isActive === false) return false;
   // 1. SUPER_ADMIN bypass
   if (await isSystemAdmin(userId)) return true;
 

@@ -116,8 +116,8 @@ export default function Page() {
     const cbr = cbRes.data || [];
     const allowedBrandIds = new Set<string>(
       cbr
-        .filter((item: any) => item.company_id === form.company_id)
-        .map((item: any) => item.brand_id)
+        .filter((item: any) => item.companyId === form.company_id)
+        .map((item: any) => item.brandId)
     );
     setCompanyBrandIds(allowedBrandIds);
 
@@ -135,8 +135,8 @@ export default function Page() {
       setCompanyBrandIds(
         new Set(
           cbr
-            .filter((item: any) => item.company_id === companyId)
-            .map((item: any) => item.brand_id)
+            .filter((item: any) => item.companyId === companyId)
+            .map((item: any) => item.brandId)
         )
       );
     } catch (e: any) {
@@ -149,37 +149,11 @@ export default function Page() {
     setLoading(true);
     setError("");
 
-    const { data } = await apiFetch("/api/master/outlets");
-    const normalizedRows: Outlet[] = (data || []).map((row: any) => ({
-      .from("outlets")
-      .select(
-        "id, code, name, address, phone, is_active, company_id, brand_id, companies:company_id(id, code, name), brands:brand_id(id, code, name)",
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setError(error.message);
-      setRows([]);
-    } else {
-      const normalizedRows: Outlet[] = ((data ?? []) as OutletQueryRow[]).map(
-        (row) => ({
-          id: row.id,
-          code: row.code,
-          name: row.name,
-          address: row.address,
-          phone: row.phone,
-          is_active: row.is_active,
-          company_id: row.company_id,
-          brand_id: row.brand_id,
-          company: firstRelation(row.companies),
-          brand: firstRelation(row.brands),
-        }),
-      );
-
-      setRows(normalizedRows);
-    }
-
-    setLoading(false);
+    try {
+      const { data } = await apiFetch("/api/master/outlets");
+      setRows((data || []).map((row: any) => ({ ...row, company_id: row.companyId, brand_id: row.brandId, is_active: row.isActive })));
+    } catch (e: any) { setError(e.message); setRows([]); }
+    finally { setLoading(false); }
   }
 
   async function loadAll() {
@@ -277,17 +251,11 @@ export default function Page() {
       is_active: form.is_active,
     };
 
-    const result = editingId
-      ? await supabase.from("outlets").update(payload).eq("id", editingId)
-      : await supabase.from("outlets").insert(payload);
-
-    if (result.error) {
-      setError(result.error.message);
-      return;
-    }
-
-    cancelForm();
-    await load();
+    try {
+      await apiFetch(editingId ? "/api/master/outlets/" + editingId : "/api/master/outlets", { method: editingId ? "PUT" : "POST", body: JSON.stringify(payload) });
+      cancelForm();
+      await load();
+    } catch (e: any) { setError(e.message); }
   }
 
   return (

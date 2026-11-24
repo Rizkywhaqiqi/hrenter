@@ -1,12 +1,16 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { db } from "@/lib/db";
+import { employeeScope } from "@/lib/scope";
+import { isSystemAdmin } from "@/lib/permissions";
 
 export async function GET() {
   const auth = await requirePermission("outlet.view");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
+  const scope = await employeeScope(auth.userId!);
   const rows = await db.outlet.findMany({
+    where: { id: scope.outletId, companyId: scope.companyId, brandId: scope.brandId },
     orderBy: { createdAt: "desc" },
     include: {
       company: { select: { id: true, code: true, name: true } },
@@ -19,6 +23,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const auth = await requirePermission("outlet.create");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
+  if (!(await isSystemAdmin(auth.userId!))) return json({ error: "Forbidden" }, 403);
 
   const body = await req.json();
   const { code, name, company_id, brand_id, address, phone, is_active } = body;

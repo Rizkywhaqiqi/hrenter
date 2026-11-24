@@ -1,12 +1,14 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { db } from "@/lib/db";
+import { employeeScope, validEmployeeDestination } from "@/lib/scope";
 
 export async function GET() {
   const auth = await requirePermission("employee.view");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
   const rows = await db.employee.findMany({
+    where: await employeeScope(auth.userId!),
     orderBy: { createdAt: "desc" },
     include: {
       company: { select: { id: true, code: true, name: true } },
@@ -57,6 +59,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (!(await validEmployeeDestination(auth.userId!, company_id, brand_id, outlet_id))) return json({ error: "Akses atau relasi organisasi tidak valid." }, 403);
+  if (supervisor_id && !(await db.employee.findFirst({ where: { AND: [await employeeScope(auth.userId!), { id: supervisor_id, companyId: company_id }] }, select: { id: true } }))) return json({ error: "Supervisor tidak valid." }, 400);
   const row = await db.employee.create({
     data: {
       employeeCode: employee_code,

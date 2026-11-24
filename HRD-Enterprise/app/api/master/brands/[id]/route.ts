@@ -1,13 +1,15 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { db } from "@/lib/db";
+import { isSystemAdmin } from "@/lib/permissions";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requirePermission("brand.update");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
+  if (!(await isSystemAdmin(auth.userId!))) return json({ error: "Forbidden" }, 403);
 
   const body = await req.json();
   const { code, name, is_active } = body;
@@ -17,7 +19,7 @@ export async function PUT(
   }
 
   const row = await db.brand.update({
-    where: { id: params.id },
+    where: { id: (await params).id },
     data: {
       code,
       name,

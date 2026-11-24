@@ -1,10 +1,10 @@
  "use client";
 import {useState} from "react";
-import { login } from "@/lib/auth";
+
 import {useRouter} from "next/navigation";
 export default function Login(){
  const r=useRouter();const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[error,setError]=useState(""),[loading,setLoading]=useState(false);
- async function submit(e:React.FormEvent){e.preventDefault();setLoading(true);setError("");const result=await login(email,password);if(!result){setError("Email atau password salah.");setLoading(false);return}r.replace("/dashboard");r.refresh()}
+ async function submit(e:React.FormEvent){e.preventDefault();setLoading(true);setError("");try { const result=await fetch("/api/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});if(!result.ok){setError("Email atau password salah.");return}r.replace("/dashboard");r.refresh(); } catch { setError("Gagal terhubung ke server."); } finally { setLoading(false); }}
  return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:24}}><div className="card" style={{width:"100%",maxWidth:430,padding:32}}>
  <div style={{marginBottom:28}}><div style={{fontSize:13,color:"#2563eb",fontWeight:800,letterSpacing:".08em"}}>HRD ENTERPRISE</div><h1 style={{margin:"8px 0 6px",fontSize:28}}>Sign in</h1><p style={{margin:0,color:"#687386"}}>Human Resources Management System</p></div>
  <form onSubmit={submit} style={{display:"grid",gap:16}}><div><label className="label">Email</label><input className="input" type="email" value={email} onChange={e=>setEmail(e.target.value)} required/></div>

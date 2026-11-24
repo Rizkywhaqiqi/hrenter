@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requirePermission("employee.update");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
@@ -44,7 +44,7 @@ export async function PUT(
   }
 
   const row = await db.employee.update({
-    where: { id: params.id },
+    where: { id: (await params).id },
     data: {
       employeeCode: employee_code,
       fullName: full_name,

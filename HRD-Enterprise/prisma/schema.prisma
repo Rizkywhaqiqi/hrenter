@@ -26,6 +26,7 @@ model Company {
   @@map("companies")
   employees Employee[]
   userCompanyAccess UserCompanyAccess[]
+}
 
 model Brand {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -42,6 +43,7 @@ model Brand {
   @@map("brands")
   employees Employee[]
   userBrandAccess UserBrandAccess[]
+}
 
 model CompanyBrand {
   companyId String @db.Char(36) @map("company_id")
@@ -55,6 +57,7 @@ model CompanyBrand {
   @@index([companyId])
   @@index([brandId])
   @@map("company_brands")
+}
 
 model Outlet {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -77,6 +80,7 @@ model Outlet {
   @@index([companyId, brandId])
   @@map("outlets")
   userOutletAccess UserOutletAccess[]
+}
 
 model Department {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -90,6 +94,7 @@ model Department {
 
   @@index([code])
   @@map("departments")
+}
 
 model Position {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -104,6 +109,7 @@ model Position {
 
   @@index([code])
   @@map("positions")
+}
 
 model Employee {
   id              String   @id @default(uuid()) @db.Char(36)
@@ -142,6 +148,7 @@ model Employee {
   @@index([brandId])
   @@index([outletId])
   @@map("employees")
+}
 
 model User {
   id            String   @id @default(uuid()) @db.Char(36)
@@ -161,6 +168,7 @@ model User {
 
   @@unique([email])
   @@map("users")
+}
 
 model UserProfile {
   id         String   @id @default(uuid()) @db.Char(36)
@@ -175,6 +183,7 @@ model UserProfile {
   employee Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
 
   @@map("user_profiles")
+}
 
 model AppRole {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -188,6 +197,7 @@ model AppRole {
 
   @@unique([code])
   @@map("app_roles")
+}
 
 model AppPermission {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -200,6 +210,7 @@ model AppPermission {
 
   @@unique([code])
   @@map("app_permissions")
+}
 
 model RolePermission {
   id           String   @id @default(uuid()) @db.Char(36)
@@ -212,6 +223,7 @@ model RolePermission {
 
   @@unique([roleId, permissionId])
   @@map("role_permissions")
+}
 
 model UserRole {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -224,6 +236,7 @@ model UserRole {
 
   @@unique([userId, roleId])
   @@map("user_roles")
+}
 
 model UserPermission {
   id          String   @id @default(uuid()) @db.Char(36)
@@ -238,6 +251,7 @@ model UserPermission {
 
   @@unique([userId, permissionId])
   @@map("user_permissions")
+}
 
 model UserCompanyAccess {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -250,6 +264,7 @@ model UserCompanyAccess {
 
   @@unique([userId, companyId])
   @@map("user_company_access")
+}
 
 model UserBrandAccess {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -262,6 +277,7 @@ model UserBrandAccess {
 
   @@unique([userId, brandId])
   @@map("user_brand_access")
+}
 
 model UserOutletAccess {
   id        String   @id @default(uuid()) @db.Char(36)
@@ -274,3 +290,4 @@ model UserOutletAccess {
 
   @@unique([userId, outletId])
   @@map("user_outlet_access")
+}

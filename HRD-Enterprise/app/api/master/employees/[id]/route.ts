@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { db } from "@/lib/db";
+import { employeeScope, validEmployeeDestination } from "@/lib/scope";
 
 export async function PUT(
   req: NextRequest,
@@ -43,6 +44,11 @@ export async function PUT(
     );
   }
 
+  if (!(await validEmployeeDestination(auth.userId!, company_id, brand_id, outlet_id))) return json({ error: "Akses atau relasi organisasi tidak valid." }, 403);
+  if (supervisor_id && !(await db.employee.findFirst({ where: { AND: [await employeeScope(auth.userId!), { id: supervisor_id, companyId: company_id }] }, select: { id: true } }))) return json({ error: "Supervisor tidak valid." }, 400);
+  const existing = await db.employee.findFirst({ where: { AND: [await employeeScope(auth.userId!), { id: (await params).id }] }, select: { id: true } });
+  if (!existing) return json({ error: "Not found" }, 404);
+  if (supervisor_id === existing.id) return json({ error: "Supervisor tidak valid." }, 400);
   const row = await db.employee.update({
     where: { id: (await params).id },
     data: {

@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/api";
 import { db } from "@/lib/db";
 import { hashPassword } from "@/lib/auth";
+import { isSystemAdmin } from "@/lib/permissions";
 
 async function authorize(permission: string) {
   const session = await requirePermission(permission);
   if (session.error) return { error: session.error, status: session.status || 403 };
+  if (!(await isSystemAdmin(session.userId!))) return { error: "Forbidden", status: 403 };
   return { user: { id: session.userId } };
 }
 

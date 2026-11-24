@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { db } from "@/lib/db";
+import { isSystemAdmin } from "@/lib/permissions";
 
 export async function PUT(
   req: NextRequest,
@@ -8,6 +9,7 @@ export async function PUT(
 ) {
   const auth = await requirePermission("outlet.update");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
+  if (!(await isSystemAdmin(auth.userId!))) return json({ error: "Forbidden" }, 403);
 
   const body = await req.json();
   const { code, name, company_id, brand_id, address, phone, is_active } = body;

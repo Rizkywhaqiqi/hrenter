@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { isSystemAdmin } from "./permissions";
 
-export async function employeeScope(userId: string) {
+export async function employeeScope(userId: string): Promise<{ companyId?: { in: string[] }; brandId?: { in: string[] }; outletId?: { in: string[] } }> {
   if (await isSystemAdmin(userId)) return {};
   const [companies, brands, outlets] = await Promise.all([
     db.userCompanyAccess.findMany({ where: { userId }, select: { companyId: true } }),

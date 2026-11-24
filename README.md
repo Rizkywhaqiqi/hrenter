@@ -16,3 +16,6 @@ SUPER_ADMIN is the only system administrator; other users require permissions an
 
 ## Status
 Foundation cleanup has been merged; validation is still required. Do not deploy to production until build, access-control and database compatibility checks pass.
+
+## Initial database setup (db_jojogrp)
+For the new empty HREnter database, set BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PASSWORD (16–72 bytes) in the local .env and run `npm run db:setup`. This validates and pushes the schema without reset or data-loss flags, then creates roles, permissions and the first Super Admin. Existing active Super Admin passwords are never changed and existing non-admin accounts are never elevated. Remove bootstrap credentials after use. Never run this in the Vercel build; review schema changes before running on populated databases.

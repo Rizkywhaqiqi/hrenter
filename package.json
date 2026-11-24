@@ -10,7 +10,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "typecheck": "prisma generate && tsc --noEmit",
-    "prisma:validate": "prisma validate"
+    "prisma:validate": "prisma validate",
+    "db:seed": "prisma generate && prisma db seed",
+    "db:setup": "node prisma/setup.cjs"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",
@@ -30,5 +32,8 @@
     "@types/react-dom": "^19.0.0",
     "prisma": "^6.0.0",
     "typescript": "^5.7.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.cjs"
   }
 }

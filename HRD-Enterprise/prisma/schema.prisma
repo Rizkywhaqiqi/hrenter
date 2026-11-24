@@ -1,0 +1,291 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  legalName String?  @db.VarChar(255) @map("legal_name")
+  npwp      String?  @db.VarChar(50)
+  phone     String?  @db.VarChar(50)
+  email     String?  @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  outlets     Outlet[]
+  companyBrands CompanyBrand[]
+
+  @@index([code])
+  @@map("companies")
+}
+
+model Brand {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  outlets       Outlet[]
+  companyBrands CompanyBrand[]
+
+  @@index([code])
+  @@map("brands")
+}
+
+model CompanyBrand {
+  companyId String @db.Char(36) @map("company_id")
+  brandId   String @db.Char(36) @map("brand_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@id([companyId, brandId])
+  @@index([companyId])
+  @@index([brandId])
+  @@map("company_brands")
+}
+
+model Outlet {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  address   String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(50)
+  isActive  Boolean  @default(true) @map("is_active")
+  companyId String   @db.Char(36) @map("company_id")
+  brandId   String   @db.Char(36) @map("brand_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  brand   Brand   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  employees Employee[]
+
+  @@index([companyId])
+  @@index([brandId])
+  @@index([companyId, brandId])
+
+model Department {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@index([code])
+  @@map("departments")
+}
+  @@map("outlets")
+}
+
+model Position {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  level     Int?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  employees Employee[]
+
+  @@index([code])
+  @@map("positions")
+}
+
+model Employee {
+  id              String   @id @default(uuid()) @db.Char(36)
+  employeeCode    String   @db.VarChar(50) @map("employee_code")
+  fullName        String   @db.VarChar(100) @map("full_name")
+  email           String?  @db.VarChar(100)
+  phone           String?  @db.VarChar(50)
+  nik             String?  @db.VarChar(50)
+  gender          String?  @db.VarChar(20)
+  birthDate       DateTime? @map("birth_date")
+  birthPlace      String?  @db.VarChar(100) @map("birth_place")
+  address         String?  @db.VarChar(255)
+  joinDate        DateTime? @map("join_date")
+  resignDate      DateTime? @map("resign_date")
+  employmentStatus String  @db.VarChar(20) @map("employment_status")
+  employmentType  String  @db.VarChar(20) @map("employment_type")
+  isActive        Boolean  @default(true) @map("is_active")
+  companyId       String   @db.Char(36) @map("company_id")
+  brandId         String   @db.Char(36) @map("brand_id")
+  outletId        String   @db.Char(36) @map("outlet_id")
+  departmentId    String?  @db.Char(36) @map("department_id")
+  positionId      String?  @db.Char(36) @map("position_id")
+  supervisorId    String?  @db.Char(36) @map("supervisor_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+model User {
+  id            String   @id @default(uuid()) @db.Char(36)
+  email         String   @db.VarChar(255)
+  passwordHash  String   @db.VarChar(255) @map("password_hash")
+  fullName      String?  @db.VarChar(100) @map("full_name")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  userProfile   UserProfile?
+  userRoles     UserRole[]
+  userPermissions UserPermission[]
+  userCompanyAccess UserCompanyAccess[]
+  userBrandAccess   UserBrandAccess[]
+  userOutletAccess  UserOutletAccess[]
+
+  @@unique([email])
+
+model UserProfile {
+  id         String   @id @default(uuid()) @db.Char(36)
+  userId     String   @unique @db.Char(36) @map("user_id")
+  fullName   String?  @db.VarChar(100) @map("full_name")
+  employeeId String?  @db.Char(36) @map("employee_id")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employee Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+
+  @@map("user_profiles")
+}
+  @@index([email])
+  @@map("users")
+}
+
+model AppRole {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  userRoles    UserRole[]
+  rolePermissions RolePermission[]
+
+  @@unique([code])
+  @@map("app_roles")
+}
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+
+model AppPermission {
+  id        String   @id @default(uuid()) @db.Char(36)
+  code      String   @db.VarChar(100)
+  name      String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+
+  @@unique([code])
+  @@map("app_permissions")
+}
+  company     Company     @relation(fields: [companyId], references: [id])
+  brand       Brand       @relation(fields: [brandId], references: [id])
+  outlet      Outlet      @relation(fields: [outletId], references: [id])
+
+model RolePermission {
+  id           String   @id @default(uuid()) @db.Char(36)
+  roleId       String   @db.Char(36) @map("role_id")
+  permissionId String   @db.Char(36) @map("permission_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  role       AppRole     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission AppPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+  department  Department? @relation(fields: [departmentId], references: [id])
+  position    Position?   @relation(fields: [positionId], references: [id])
+  supervisor  Employee?   @relation("Supervisor", fields: [supervisorId], references: [id])
+
+model UserRole {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @db.Char(36) @map("user_id")
+  roleId    String   @db.Char(36) @map("role_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   AppRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+  supervisees Employee[]  @relation("Supervisor")
+  userProfile UserProfile?
+
+
+model UserPermission {
+  id          String   @id @default(uuid()) @db.Char(36)
+  userId      String   @db.Char(36) @map("user_id")
+  permissionId String  @db.Char(36) @map("permission_id")
+  effect      String   @default("ALLOW") @db.VarChar(10)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission AppPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+  @@index([employeeCode])
+
+model UserCompanyAccess {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @db.Char(36) @map("user_id")
+  companyId String   @db.Char(36) @map("company_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@map("user_company_access")
+}
+  @@index([companyId])
+  @@index([brandId])
+  @@index([outletId])
+
+model UserBrandAccess {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @db.Char(36) @map("user_id")
+  brandId   String   @db.Char(36) @map("brand_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brandId])
+  @@map("user_brand_access")
+}
+  @@map("employees")
+}
+
+model UserOutletAccess {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @db.Char(36) @map("user_id")
+  outletId  String   @db.Char(36) @map("outlet_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outlet Outlet @relation(fields: [outletId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, outletId])
+  @@map("user_outlet_access")
+}

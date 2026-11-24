@@ -1,0 +1,1 @@
+export function Header({title,subtitle}:{title:string,subtitle?:string}){return <header style={{background:"#fff",borderBottom:"1px solid #e4e8ef",padding:"18px 28px",position:"sticky",top:0,zIndex:5}}><h1 style={{margin:0,fontSize:22}}>{title}</h1>{subtitle&&<p style={{margin:"4px 0 0",color:"#687386",fontSize:13}}>{subtitle}</p>}</header>}

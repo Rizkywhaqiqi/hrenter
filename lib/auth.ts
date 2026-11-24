@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 import { db } from "./db";
 
 function jwtSecret() {
-  const secret = process.env.JWT_SECRET;
-  if (!secret || new TextEncoder().encode(secret).length < 32) throw new Error("JWT_SECRET must be at least 32 bytes");
+  const secret = process.env.AUTH_SECRET || process.env.JWT_SECRET;
+  if (!secret || new TextEncoder().encode(secret).length < 32) throw new Error("AUTH_SECRET must be at least 32 bytes");
   return new TextEncoder().encode(secret);
 }
 const COOKIE_NAME = "hrd_session";

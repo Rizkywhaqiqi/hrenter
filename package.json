@@ -11,8 +11,9 @@
     "prisma:studio": "prisma studio",
     "typecheck": "prisma generate && tsc --noEmit",
     "prisma:validate": "prisma validate",
-    "db:seed": "prisma generate && prisma db seed",
-    "db:setup": "node prisma/setup.cjs"
+    "db:seed": "node prisma/setup.cjs seed",
+    "db:setup": "node prisma/setup.cjs setup",
+    "db:migrate": "node prisma/setup.cjs migrate"
   },
   "dependencies": {
     "@prisma/client": "^6.0.0",

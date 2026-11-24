@@ -4,9 +4,9 @@ const db = new PrismaClient();
 const roles = ['SUPER_ADMIN','OWNER','HR_MANAGER','HR_STAFF','FINANCE','SUPERVISOR','EMPLOYEE'];
 const permissions = ['user.view','user.create', ...['brand','company','department','employee','outlet','position'].flatMap(m => ['view','create','update'].map(a => m+'.'+a))];
 async function main() {
-  const email = (process.env.BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
-  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD || '';
-  if (!email || !email.includes('@') || Buffer.byteLength(password)<16 || Buffer.byteLength(password)>72) throw new Error('Set BOOTSTRAP_ADMIN_EMAIL and a 16-72 byte BOOTSTRAP_ADMIN_PASSWORD');
+  const email = (process.env.SUPER_ADMIN_EMAIL || process.env.BOOTSTRAP_ADMIN_EMAIL || '').trim().toLowerCase();
+  const password = process.env.SUPER_ADMIN_PASSWORD || process.env.BOOTSTRAP_ADMIN_PASSWORD || '';
+  if (!email || !email.includes('@') || Buffer.byteLength(password)<16 || Buffer.byteLength(password)>72) throw new Error('Set SUPER_ADMIN_EMAIL and a 16-72 byte SUPER_ADMIN_PASSWORD');
   if (new URL(process.env.DATABASE_URL).pathname !== '/db_jojogrp') throw new Error('Unexpected database; refusing bootstrap');
   await db.$transaction(async tx => {
     const existing = await tx.user.findUnique({where:{email},include:{userRoles:{include:{role:true}},userProfile:true}});

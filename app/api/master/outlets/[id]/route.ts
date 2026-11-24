@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
+import { employeeScope } from "@/lib/scope";
 import { isSystemAdmin } from "@/lib/permissions";
 
 export async function PUT(
@@ -22,14 +24,7 @@ export async function PUT(
   }
 
   // Validate company-brand relation exists
-  const cb = await db.companyBrand.findUnique({
-    where: {
-      companyId_brandId: {
-        companyId: company_id,
-        brandId: brand_id,
-      },
-    },
-  });
+  const [cb] = await rows("SELECT 1 FROM company_brands WHERE company_id=? AND brand_id=?",[company_id,brand_id]);
   if (!cb) {
     return json(
       {
@@ -40,9 +35,7 @@ export async function PUT(
     );
   }
 
-  const row = await db.outlet.update({
-    where: { id: (await params).id },
-    data: {
+  const row = await saveMaster("outlets",{
       code,
       name,
       companyId: company_id,
@@ -50,11 +43,7 @@ export async function PUT(
       address: address || null,
       phone: phone || null,
       isActive: is_active ?? true,
-    },
-    include: {
-      company: { select: { id: true, code: true, name: true } },
-      brand: { select: { id: true, code: true, name: true } },
-    },
-  });
+    },await employeeScope(auth.userId!),(await params).id);
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row });
 }

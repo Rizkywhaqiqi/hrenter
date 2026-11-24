@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
+import { employeeScope } from "@/lib/scope";
 
 export async function GET() {
   const auth = await requirePermission("position.view");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
-  const rows = await db.position.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const rows = await listMaster("positions", await employeeScope(auth.userId!));
   return json({ data: rows });
 }
 
@@ -23,13 +23,12 @@ export async function POST(req: NextRequest) {
     return json({ error: "Code dan Name wajib diisi." }, 400);
   }
 
-  const row = await db.position.create({
-    data: {
+  const row = await saveMaster("positions",{
       code,
       name,
       level: level ? Number(level) : null,
       isActive: is_active ?? true,
-    },
-  });
+    },await employeeScope(auth.userId!));
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row }, 201);
 }

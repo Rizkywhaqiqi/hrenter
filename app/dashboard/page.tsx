@@ -1,5 +1,5 @@
 import { Header } from "@/components/Header";
-import { db } from "@/lib/db";
+import { countMaster } from "@/lib/master";
 import { getSession } from "@/lib/auth";
 import { employeeScope } from "@/lib/scope";
 import { hasPermission } from "@/lib/permissions";
@@ -9,10 +9,10 @@ export default async function Dashboard() {
   if (!session) redirect("/login");
   const scope = await employeeScope(session.userId);
   const [companies, brands, outlets, employees] = await Promise.all([
-    (await hasPermission(session.userId, "company.view")) ? db.company.count({ where: { id: scope.companyId } }) : 0,
-    (await hasPermission(session.userId, "brand.view")) ? db.brand.count({ where: { id: scope.brandId } }) : 0,
-    (await hasPermission(session.userId, "outlet.view")) ? db.outlet.count({ where: { id: scope.outletId, companyId: scope.companyId, brandId: scope.brandId } }) : 0,
-    (await hasPermission(session.userId, "employee.view")) ? db.employee.count({ where: scope }) : 0,
+    (await hasPermission(session.userId, "company.view")) ? countMaster("companies",scope) : 0,
+    (await hasPermission(session.userId, "brand.view")) ? countMaster("brands",scope) : 0,
+    (await hasPermission(session.userId, "outlet.view")) ? countMaster("outlets",scope) : 0,
+    (await hasPermission(session.userId, "employee.view")) ? countMaster("employees",scope) : 0,
   ]);
  const cards=[["Companies",companies,"#2563eb"],["Brands",brands,"#7c3aed"],["Outlets",outlets,"#059669"],["Karyawan",employees,"#ea580c"]];
  return <><Header title="Dashboard" subtitle="Ringkasan HRD Enterprise"/><main className="container-page">

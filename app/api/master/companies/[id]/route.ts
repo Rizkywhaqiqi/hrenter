@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
+import { employeeScope } from "@/lib/scope";
 import { isSystemAdmin } from "@/lib/permissions";
 
 export async function PUT(
@@ -18,9 +20,7 @@ export async function PUT(
     return json({ error: "Code dan Name wajib diisi." }, 400);
   }
 
-  const row = await db.company.update({
-    where: { id: (await params).id },
-    data: {
+  const row = await saveMaster("companies",{
       code,
       name,
       legalName: legal_name || null,
@@ -28,7 +28,7 @@ export async function PUT(
       phone: phone || null,
       email: email || null,
       isActive: is_active ?? true,
-    },
-  });
+    },await employeeScope(auth.userId!),(await params).id);
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row });
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
 import { employeeScope } from "@/lib/scope";
 import { isSystemAdmin } from "@/lib/permissions";
 
@@ -8,15 +9,7 @@ export async function GET() {
   const auth = await requirePermission("outlet.view");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
-  const scope = await employeeScope(auth.userId!);
-  const rows = await db.outlet.findMany({
-    where: { id: scope.outletId, companyId: scope.companyId, brandId: scope.brandId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      company: { select: { id: true, code: true, name: true } },
-      brand: { select: { id: true, code: true, name: true } },
-    },
-  });
+  const rows = await listMaster("outlets", await employeeScope(auth.userId!));
   return json({ data: rows });
 }
 
@@ -36,14 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Validate company-brand relation exists
-  const cb = await db.companyBrand.findUnique({
-    where: {
-      companyId_brandId: {
-        companyId: company_id,
-        brandId: brand_id,
-      },
-    },
-  });
+  const [cb] = await rows("SELECT 1 FROM company_brands WHERE company_id=? AND brand_id=?",[company_id,brand_id]);
   if (!cb) {
     return json(
       {
@@ -54,8 +40,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const row = await db.outlet.create({
-    data: {
+  const row = await saveMaster("outlets",{
       code,
       name,
       companyId: company_id,
@@ -63,11 +48,7 @@ export async function POST(req: NextRequest) {
       address: address || null,
       phone: phone || null,
       isActive: is_active ?? true,
-    },
-    include: {
-      company: { select: { id: true, code: true, name: true } },
-      brand: { select: { id: true, code: true, name: true } },
-    },
-  });
+    },await employeeScope(auth.userId!));
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row }, 201);
 }

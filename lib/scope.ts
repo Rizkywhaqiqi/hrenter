@@ -1,17 +1,6 @@
-import { db } from "./db";
-import { isSystemAdmin } from "./permissions";
-
-export async function employeeScope(userId: string): Promise<{ companyId?: { in: string[] }; brandId?: { in: string[] }; outletId?: { in: string[] } }> {
-  if (await isSystemAdmin(userId)) return {};
-  const [companies, brands, outlets] = await Promise.all([
-    db.userCompanyAccess.findMany({ where: { userId }, select: { companyId: true } }),
-    db.userBrandAccess.findMany({ where: { userId }, select: { brandId: true } }),
-    db.userOutletAccess.findMany({ where: { userId }, select: { outletId: true } }),
-  ]);
-  return { companyId: { in: companies.map(x => x.companyId) }, brandId: { in: brands.map(x => x.brandId) }, outletId: { in: outlets.map(x => x.outletId) } };
-}
-export async function validEmployeeDestination(userId: string, companyId: string, brandId: string, outletId: string) {
-  const scope = await employeeScope(userId);
-  const outlet = await db.outlet.findFirst({ where: { AND: [{ companyId: scope.companyId, brandId: scope.brandId, id: scope.outletId }, { companyId, brandId, id: outletId, isActive: true }] } });
-  return !!outlet;
-}
+import {rows,type SqlValue} from './db';
+import {isSystemAdmin} from './permissions';
+export type Scope={all:boolean;userId:string};
+export async function employeeScope(userId:string):Promise<Scope>{return {all:await isSystemAdmin(userId),userId};}
+export function scopeFilter(scope:Scope, columns:Partial<Record<'company'|'brand'|'outlet',string>>):{sql:string;params:SqlValue[]}{if(scope.all)return {sql:'1=1',params:[]};const parts:string[]=[];const params:SqlValue[]=[];for(const [key,column] of Object.entries(columns)){if(!['company','brand','outlet'].includes(key))throw new Error('Invalid scope');parts.push('EXISTS (SELECT 1 FROM user_'+key+'_access a WHERE a.user_id=? AND a.'+key+'_id='+column+')');params.push(scope.userId);}return {sql:parts.join(' AND ')||'1=0',params};}
+export async function validEmployeeDestination(userId:string,companyId:string,brandId:string,outletId:string){const f=scopeFilter(await employeeScope(userId),{company:'t.company_id',brand:'t.brand_id',outlet:'t.id'});return !!(await rows('SELECT t.id FROM outlets t JOIN company_brands cb ON cb.company_id=t.company_id AND cb.brand_id=t.brand_id WHERE t.id=? AND t.company_id=? AND t.brand_id=? AND t.is_active=1 AND '+f.sql,[outletId,companyId,brandId,...f.params]))[0];}

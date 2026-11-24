@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
 import { employeeScope, validEmployeeDestination } from "@/lib/scope";
 
 export async function PUT(
@@ -45,13 +46,11 @@ export async function PUT(
   }
 
   if (!(await validEmployeeDestination(auth.userId!, company_id, brand_id, outlet_id))) return json({ error: "Akses atau relasi organisasi tidak valid." }, 403);
-  if (supervisor_id && !(await db.employee.findFirst({ where: { AND: [await employeeScope(auth.userId!), { id: supervisor_id, companyId: company_id }] }, select: { id: true } }))) return json({ error: "Supervisor tidak valid." }, 400);
-  const existing = await db.employee.findFirst({ where: { AND: [await employeeScope(auth.userId!), { id: (await params).id }] }, select: { id: true } });
+  if (supervisor_id && !((await listMaster("employees",await employeeScope(auth.userId!),supervisor_id)).find(e=>e.companyId===company_id))) return json({ error: "Supervisor tidak valid." }, 400);
+  const existing = (await listMaster("employees",await employeeScope(auth.userId!),(await params).id))[0];
   if (!existing) return json({ error: "Not found" }, 404);
   if (supervisor_id === existing.id) return json({ error: "Supervisor tidak valid." }, 400);
-  const row = await db.employee.update({
-    where: { id: (await params).id },
-    data: {
+  const row = await saveMaster("employees",{
       employeeCode: employee_code,
       fullName: full_name,
       email: email || null,
@@ -72,14 +71,7 @@ export async function PUT(
       positionId: position_id || null,
       supervisorId: supervisor_id || null,
       isActive: is_active ?? true,
-    },
-    include: {
-      company: { select: { id: true, code: true, name: true } },
-      brand: { select: { id: true, code: true, name: true } },
-      outlet: { select: { id: true, code: true, name: true } },
-      department: { select: { id: true, code: true, name: true } },
-      position: { select: { id: true, code: true, name: true } },
-    },
-  });
+    },await employeeScope(auth.userId!),(await params).id);
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row });
 }

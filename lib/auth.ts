@@ -1,7 +1,7 @@
 import { compare, hash } from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { db } from "./db";
+import { rows } from "./db";
 
 function jwtSecret() {
   const secret = process.env.AUTH_SECRET || process.env.JWT_SECRET;
@@ -58,8 +58,8 @@ export async function getSession(): Promise<{
   if (!token) return null;
   const session = await verifyToken(token);
   if (!session) return null;
-  const user = await db.user.findUnique({ where: { id: session.userId }, include: { userProfile: true } });
-  if (!user?.isActive || user.userProfile?.isActive === false) return null;
+  const [user] = await rows("SELECT u.id,u.email FROM users u JOIN user_profiles p ON p.user_id=u.id WHERE u.id=? AND u.is_active=1 AND p.is_active=1",[session.userId]);
+  if (!user) return null;
   return { userId: user.id, email: user.email };
 }
 
@@ -89,12 +89,9 @@ export async function login(email: string, password: string): Promise<{
   user: { id: string; email: string; fullName: string | null };
   token: string;
 } | null> {
-  const user = await db.user.findUnique({
-    where: { email: email.trim().toLowerCase() },
-    include: { userProfile: true },
-  });
+  const [user] = await rows("SELECT u.id,u.email,u.password_hash AS passwordHash,COALESCE(p.full_name,u.full_name) AS fullName FROM users u JOIN user_profiles p ON p.user_id=u.id WHERE u.email=? AND u.is_active=1 AND p.is_active=1",[email.trim().toLowerCase()]);
 
-  if (!user || !user.isActive || user.userProfile?.isActive === false) return null;
+  if (!user) return null;
 
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) return null;
@@ -110,7 +107,7 @@ export async function login(email: string, password: string): Promise<{
     user: {
       id: user.id,
       email: user.email,
-      fullName: user.userProfile?.fullName ?? user.fullName,
+      fullName: user.fullName,
     },
     token,
   };

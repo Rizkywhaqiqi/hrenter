@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
 import { employeeScope } from "@/lib/scope";
 import { isSystemAdmin } from "@/lib/permissions";
 
@@ -8,11 +9,7 @@ export async function GET() {
   const auth = await requirePermission("brand.view");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
-  const scope = await employeeScope(auth.userId!);
-  const rows = await db.brand.findMany({
-    where: { id: scope.brandId },
-    orderBy: { createdAt: "desc" },
-  });
+  const rows = await listMaster("brands", await employeeScope(auth.userId!));
   return json({ data: rows });
 }
 
@@ -28,12 +25,11 @@ export async function POST(req: NextRequest) {
     return json({ error: "Code dan Name wajib diisi." }, 400);
   }
 
-  const row = await db.brand.create({
-    data: {
+  const row = await saveMaster("brands",{
       code,
       name,
       isActive: is_active ?? true,
-    },
-  });
+    },await employeeScope(auth.userId!));
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row }, 201);
 }

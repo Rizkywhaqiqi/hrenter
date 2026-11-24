@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
-import { db } from "@/lib/db";
+import { rows } from "@/lib/db";
+import { listMaster, saveMaster } from "@/lib/master";
+import { employeeScope } from "@/lib/scope";
 
 export async function PUT(
   req: NextRequest,
@@ -16,13 +18,11 @@ export async function PUT(
     return json({ error: "Code dan Name wajib diisi." }, 400);
   }
 
-  const row = await db.department.update({
-    where: { id: (await params).id },
-    data: {
+  const row = await saveMaster("departments",{
       code,
       name,
       isActive: is_active ?? true,
-    },
-  });
+    },await employeeScope(auth.userId!),(await params).id);
+  if (!row) return json({error:"Not found"},404);
   return json({ data: row });
 }

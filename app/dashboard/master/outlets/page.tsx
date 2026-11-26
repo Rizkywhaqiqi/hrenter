@@ -20,6 +20,8 @@ type Company = {
   id: string;
   code: string | null;
   name: string | null;
+  legalName?: string | null;
+  isActive?: boolean;
 };
 
 type Brand = {
@@ -63,7 +65,7 @@ export default function Page() {
   const [rows, setRows] = useState<Outlet[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
-  const [companyBrandIds, setCompanyBrandIds] = useState<Set<string>>(new Set());
+  const [links, setLinks] = useState<{companyId:string;brandId:string}[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMaster, setLoadingMaster] = useState(true);
   const [show, setShow] = useState(false);
@@ -80,69 +82,14 @@ export default function Page() {
     is_active: true,
   });
 
-  const companyOptions = useMemo(
-    () =>
-      [...companies].sort((a, b) =>
-        `${a.code ?? ""} ${a.name ?? ""}`.localeCompare(
-          `${b.code ?? ""} ${b.name ?? ""}`,
-        ),
-      ),
-    [companies],
-  );
-
-  const brandOptions = useMemo(() => {
-    const source = form.company_id
-      ? brands.filter((brand) => companyBrandIds.has(brand.id))
-      : brands;
-
-    return [...source].sort((a, b) =>
-      `${a.code ?? ""} ${a.name ?? ""}`.localeCompare(
-        `${b.code ?? ""} ${b.name ?? ""}`,
-      ),
-    );
-  }, [brands, companyBrandIds, form.company_id]);
-
+  const companyOptions = useMemo(() => companies.filter(c=>c.isActive!==false && links.some(l=>l.brandId===form.brand_id&&l.companyId===c.id)), [companies,links,form.brand_id]);
+  const brandOptions = useMemo(() => brands.filter(b=>b.isActive!==false), [brands]);
   async function loadMasters() {
     setLoadingMaster(true);
-    setError("");
-
-    const [cRes, bRes, cbRes] = await Promise.all([
-      apiFetch("/api/master/companies"),
-      apiFetch("/api/master/brands"),
-      apiFetch("/api/master/company-brands"),
-    ]);
-    setCompanies(cRes.data || []);
-    setBrands(bRes.data || []);
-    const cbr = cbRes.data || [];
-    const allowedBrandIds = new Set<string>(
-      cbr
-        .filter((item: any) => item.companyId === form.company_id)
-        .map((item: any) => item.brandId)
-    );
-    setCompanyBrandIds(allowedBrandIds);
-
-    setLoadingMaster(false);
-  }
-
-  async function loadCompanyBrands(companyId: string) {
-    if (!companyId) {
-      setCompanyBrandIds(new Set());
-      return;
-    }
     try {
-      const { data } = await apiFetch("/api/master/company-brands");
-      const cbr = data || [];
-      setCompanyBrandIds(
-        new Set(
-          cbr
-            .filter((item: any) => item.companyId === companyId)
-            .map((item: any) => item.brandId)
-        )
-      );
-    } catch (e: any) {
-      setError(e.message);
-      setCompanyBrandIds(new Set());
-    }
+      const [c,b,l]=await Promise.all(["companies","brands","company-brands"].map(k=>apiFetch("/api/master/"+k)));
+      setCompanies(c.data||[]);setBrands(b.data||[]);setLinks(l.data||[]);
+    } catch(e:any){setLinks([]);setError(e.message)} finally {setLoadingMaster(false)}
   }
 
   async function load() {
@@ -175,17 +122,7 @@ export default function Page() {
       phone: "",
       is_active: true,
     });
-    setCompanyBrandIds(new Set());
-  }
 
-  async function handleCompanyChange(companyId: string) {
-    setForm((current) => ({
-      ...current,
-      company_id: companyId,
-      brand_id: "",
-    }));
-    setError("");
-    await loadCompanyBrands(companyId);
   }
 
   function startAdd() {
@@ -200,7 +137,7 @@ export default function Page() {
     setEditingId(row.id);
     setForm({ code: row.code ?? "", name: row.name ?? "", company_id: row.company_id ?? "", brand_id: row.brand_id ?? "", address: row.address ?? "", phone: row.phone ?? "", is_active: row.is_active !== false });
     setShow(true);
-    loadCompanyBrands(row.company_id);
+
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -234,9 +171,9 @@ export default function Page() {
       return;
     }
 
-    if (!companyBrandIds.has(form.brand_id)) {
+    if (!companyOptions.some(c=>c.id===form.company_id)) {
       setError(
-        "Brand tersebut belum terdaftar untuk Company / CV yang dipilih. Tambahkan relasi Company + Brand terlebih dahulu.",
+        "CV belum terhubung dengan brand aktif tersebut. Tambahkan relasi Brand–CV terlebih dahulu.",
       );
       return;
     }
@@ -328,49 +265,8 @@ export default function Page() {
                 />
               </div>
 
-              <div>
-                <label className="label">Company / CV</label>
-                <select
-                  className="input"
-                  value={form.company_id}
-                  onChange={(e) => handleCompanyChange(e.target.value)}
-                  disabled={loadingMaster}
-                >
-                  <option value="">Pilih Company / CV</option>
-                  {companyOptions.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.code ? `${company.code} — ` : ""}
-                      {company.name ?? "-"}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="label">Brand</label>
-                <select
-                  className="input"
-                  value={form.brand_id}
-                  onChange={(e) =>
-                    setForm({ ...form, brand_id: e.target.value })
-                  }
-                  disabled={loadingMaster || !form.company_id}
-                >
-                  <option value="">
-                    {form.company_id
-                      ? brandOptions.length > 0
-                        ? "Pilih Brand"
-                        : "Belum ada Brand untuk Company ini"
-                      : "Pilih Company terlebih dahulu"}
-                  </option>
-                  {brandOptions.map((brand) => (
-                    <option key={brand.id} value={brand.id}>
-                      {brand.code ? `${brand.code} — ` : ""}
-                      {brand.name ?? "-"}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div><label className="label">Brand</label><select className="input" disabled={loadingMaster} value={form.brand_id} onChange={e=>setForm(current=>({...current,brand_id:e.target.value,company_id:""}))}><option value="">Pilih Brand</option>{brandOptions.map(b=><option key={b.id} value={b.id}>{b.code} — {b.name}</option>)}</select></div>
+              <div><label className="label">Company / CV</label><select className="input" disabled={loadingMaster||!form.brand_id} value={form.company_id} onChange={e=>setForm(current=>({...current,company_id:e.target.value}))}><option value="">{!form.brand_id?"Pilih Brand terlebih dahulu":companyOptions.length?"Pilih CV":"Belum ada CV terhubung"}</option>{companyOptions.map(c=><option key={c.id} value={c.id}>{c.code} — {c.legalName||c.name}</option>)}</select></div>
 
               <div>
                 <label className="label">Address</label>
@@ -413,7 +309,7 @@ export default function Page() {
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}><button
               className="btn btn-primary"
               onClick={save}
-              disabled={loadingMaster || !form.company_id || !form.brand_id}
+              disabled={loadingMaster || !companyOptions.some(c=>c.id===form.company_id)}
             >
               {editingId ? "Update" : "Simpan"}
             </button><button className="btn btn-secondary" onClick={cancelForm}><X size={16}/>Batal</button></div>

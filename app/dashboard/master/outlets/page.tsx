@@ -28,6 +28,7 @@ type Brand = {
   id: string;
   code: string | null;
   name: string | null;
+  isActive?: boolean;
 };
 
 type Outlet = {

@@ -1,3 +1,4 @@
+import {organizationWrite,Busy,audit} from "@/lib/security";
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { rows } from "@/lib/db";
@@ -13,6 +14,8 @@ export async function PUT(
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
   if (!(await isSystemAdmin(auth.userId!))) return json({ error: "Forbidden" }, 403);
 
+  if(req.headers.get("origin")!==new URL(req.url).origin)return json({error:"Forbidden"},403);
+  try{return await organizationWrite(async()=>{
   const body = await req.json().catch(()=>null);if(!body||typeof body!=="object")return json({error:"Data tidak valid."},400);
   const { code, name, company_id, brand_id, address, phone, is_active } = body;
 
@@ -47,5 +50,7 @@ export async function PUT(
       isActive: is_active ?? true,
     },await employeeScope(auth.userId!),(await params).id);
   if (!row) return json({error:"Not found"},404);
+  await audit(auth.userId!, "outlet.update",String(row.id));
   return json({ data: row });
+  });}catch(e){if(e instanceof Busy)return json({error:e.message},409);throw e;}
 }

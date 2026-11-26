@@ -1,3 +1,4 @@
+import {audit} from "@/lib/security";
 import {NextRequest,NextResponse} from "next/server";
 import {requirePermission} from "@/lib/api";
 import {rows,transaction} from "@/lib/db";
@@ -48,17 +49,17 @@ async function applyAccess(c:import("mysql2/promise").PoolConnection,id:string,a
  await c.execute("DELETE FROM user_permissions WHERE user_id=?",[id]);for(const o of a.overrides){const [p]=await c.execute<RowDataPacket[]>("SELECT id FROM app_permissions WHERE id=?",[o.permission_id]);if(!p.length)throw new Invalid("Permission tidak valid.");await c.execute("INSERT INTO user_permissions(id,user_id,permission_id,effect) VALUES (?,?,?,?)",[randomUUID(),id,o.permission_id,o.effect]);}
 }
 export async function POST(req:NextRequest){
- if(!sameOrigin(req)||!await authorize("user.create"))return json({error:"Forbidden"},403);
+ const admin=await authorize("user.create");if(!sameOrigin(req)||!admin)return json({error:"Forbidden"},403);
  const b=await req.json().catch(()=>null),a=parseAccess(b);
  if(!a||typeof b.email!=="string"||typeof b.full_name!=="string"||typeof b.password!=="string")return json({error:"Data akun atau akses tidak valid."},400);
  const email=b.email.trim().toLowerCase(),name=b.full_name.trim(),password=b.password;
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>255||!name||name.length>100||Buffer.byteLength(password)<12||Buffer.byteLength(password)>72)return json({error:"Isi nama, email valid, dan password 12–72 byte."},400);
  const id=randomUUID(),hash=await hashPassword(password);
- try{await transaction(async c=>{await c.execute("INSERT INTO users(id,email,password_hash,full_name) VALUES (?,?,?,?)",[id,email,hash,name]);await c.execute("INSERT INTO user_profiles(id,user_id,full_name) VALUES (?,?,?)",[randomUUID(),id,name]);await applyAccess(c,id,a);});return json({user:{id,email}},201)}catch(e){if(e instanceof Invalid)return json({error:e.message},400);if((e as {code?:string}).code==="ER_DUP_ENTRY")return json({error:"Email sudah terdaftar."},409);throw e;}
+ try{await transaction(async c=>{await c.execute("INSERT INTO users(id,email,password_hash,full_name) VALUES (?,?,?,?)",[id,email,hash,name]);await c.execute("INSERT INTO user_profiles(id,user_id,full_name) VALUES (?,?,?)",[randomUUID(),id,name]);await applyAccess(c,id,a);});await audit(admin,"user.create",id);return json({user:{id,email}},201)}catch(e){if(e instanceof Invalid)return json({error:e.message},400);if((e as {code?:string}).code==="ER_DUP_ENTRY")return json({error:"Email sudah terdaftar."},409);throw e;}
 }
 export async function PUT(req:NextRequest){
  const admin=await authorize("user.view");if(!sameOrigin(req)||!admin)return json({error:"Forbidden"},403);
  const b=await req.json().catch(()=>null),a=parseAccess(b);
  if(!a||typeof b.id!=="string"||b.id===admin||typeof b.is_active!=="boolean")return json({error:"Akun atau akses tidak valid. Akun sendiri tidak dapat diubah."},400);
- try{await transaction(async c=>{const [u]=await c.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? FOR UPDATE",[b.id]);if(!u.length)throw new Invalid("Akun tidak ditemukan.");const [protectedRoles]=await c.execute<RowDataPacket[]>("SELECT 1 FROM user_roles ur JOIN app_roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.code='SUPER_ADMIN'",[b.id]);if(protectedRoles.length)throw new Invalid("Akun SUPER_ADMIN dilindungi.");await applyAccess(c,b.id,a);await c.execute("UPDATE users SET is_active=? WHERE id=?",[b.is_active,b.id]);await c.execute("UPDATE user_profiles SET is_active=? WHERE user_id=?",[b.is_active,b.id]);});return json({ok:true})}catch(e){if(e instanceof Invalid)return json({error:e.message},400);throw e}
+ try{await transaction(async c=>{const [u]=await c.execute<RowDataPacket[]>("SELECT id FROM users WHERE id=? FOR UPDATE",[b.id]);if(!u.length)throw new Invalid("Akun tidak ditemukan.");const [protectedRoles]=await c.execute<RowDataPacket[]>("SELECT 1 FROM user_roles ur JOIN app_roles r ON r.id=ur.role_id WHERE ur.user_id=? AND r.code='SUPER_ADMIN'",[b.id]);if(protectedRoles.length)throw new Invalid("Akun SUPER_ADMIN dilindungi.");await applyAccess(c,b.id,a);await c.execute("UPDATE users SET is_active=? WHERE id=?",[b.is_active,b.id]);await c.execute("UPDATE user_profiles SET is_active=? WHERE user_id=?",[b.is_active,b.id]);});await audit(admin,"user.access.update",b.id);return json({ok:true})}catch(e){if(e instanceof Invalid)return json({error:e.message},400);throw e}
 }

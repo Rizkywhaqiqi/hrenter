@@ -1,0 +1,10 @@
+const test=require('node:test');const assert=require('node:assert/strict');const ts=require('typescript');const fs=require('node:fs');const Module=require('node:module');
+const m=new Module('employee-validation');m._compile(ts.transpileModule(fs.readFileSync('lib/employee-validation.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,'employee-validation.js');const {validateEmployee}=m.exports;
+const valid={employee_code:'EMP-01',full_name:'Test Employee',company_id:'c',brand_id:'b',outlet_id:'o',employment_status:'ACTIVE',employment_type:'PERMANENT',is_active:true};
+test('valid employee',()=>assert.equal(validateEmployee(valid),null));
+test('reject missing organization',()=>assert.ok(validateEmployee({...valid,company_id:''})));
+test('reject inconsistent active state',()=>assert.ok(validateEmployee({...valid,is_active:false})));
+test('reject invalid calendar date',()=>assert.ok(validateEmployee({...valid,birth_date:'2026-02-30'})));
+test('reject resigned employee without exit date',()=>assert.ok(validateEmployee({...valid,employment_status:'RESIGNED',is_active:false})));
+test('accept resigned employee with date',()=>assert.equal(validateEmployee({...valid,employment_status:'RESIGNED',is_active:false,resign_date:'2026-11-01'}),null));
+test('reject nonstring field',()=>assert.ok(validateEmployee({...valid,full_name:12})));

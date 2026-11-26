@@ -1,3 +1,4 @@
+import {organizationWrite,Busy,audit} from "@/lib/security";
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { rows } from "@/lib/db";
@@ -17,6 +18,8 @@ export async function POST(req: NextRequest) {
   const auth = await requirePermission("employee.create");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
+  if(req.headers.get("origin")!==new URL(req.url).origin)return json({error:"Forbidden"},403);
+  try{return await organizationWrite(async()=>{
   const body = await req.json().catch(()=>null);
   const invalid=validateEmployee(body);if(invalid)return json({error:invalid},400);
   const {
@@ -79,5 +82,7 @@ export async function POST(req: NextRequest) {
       isActive: employment_status === 'ACTIVE',
     },await employeeScope(auth.userId!));
   if (!row) return json({error:"Not found"},404);
+  await audit(auth.userId!, "employee.create",String(row.id));
   return json({ data: row }, 201);
+  });}catch(e){if(e instanceof Busy)return json({error:e.message},409);throw e;}
 }

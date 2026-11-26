@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Validate company-brand relation exists
-  const [cb] = await rows("SELECT 1 FROM company_brands WHERE company_id=? AND brand_id=?",[company_id,brand_id]);
+  const [cb] = await rows("SELECT 1 FROM company_brands cb JOIN companies c ON c.id=cb.company_id AND c.is_active=1 JOIN brands b ON b.id=cb.brand_id AND b.is_active=1 WHERE cb.company_id=? AND cb.brand_id=?",[company_id,brand_id]);
   if (!cb) {
     return json(
       {

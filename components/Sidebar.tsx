@@ -5,7 +5,7 @@ import {LayoutDashboard,Users,Building2,Store,BriefcaseBusiness,UserRound,LogOut
 
 const groups=[
  {title:"Overview",items:[["Dashboard","/dashboard",LayoutDashboard]]},
- {title:"Master Data",items:[["Company","/dashboard/master/companies",Building2],["Brand","/dashboard/master/brands",BriefcaseBusiness],["Outlet","/dashboard/master/outlets",Store],["Department","/dashboard/master/departments",BriefcaseBusiness],["Position","/dashboard/master/positions",BriefcaseBusiness],["Karyawan","/dashboard/master/employees",UserRound]]},
+ {title:"Master Data",items:[["Company","/dashboard/master/companies",Building2],["Brand","/dashboard/master/brands",BriefcaseBusiness],["Relasi Brand–CV","/dashboard/master/company-brands",Building2],["Outlet","/dashboard/master/outlets",Store],["Department","/dashboard/master/departments",BriefcaseBusiness],["Position","/dashboard/master/positions",BriefcaseBusiness],["Karyawan","/dashboard/master/employees",UserRound]]},
  {title:"Administration",items:[["User Management","/dashboard/users",Users]]}
 ];
 export function Sidebar({email}:{email?:string}){

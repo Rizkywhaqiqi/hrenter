@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { requirePermission, json } from "@/lib/api";
 import { rows } from "@/lib/db";
+import { validateEmployee } from "@/lib/employee-validation";
 import { listMaster, saveMaster } from "@/lib/master";
 import { employeeScope, validEmployeeDestination } from "@/lib/scope";
 
@@ -16,7 +17,8 @@ export async function POST(req: NextRequest) {
   const auth = await requirePermission("employee.create");
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
 
-  const body = await req.json();
+  const body = await req.json().catch(()=>null);
+  const invalid=validateEmployee(body);if(invalid)return json({error:invalid},400);
   const {
     employee_code,
     full_name,
@@ -50,11 +52,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const duplicate=await rows("SELECT id FROM employees WHERE employee_code=? LIMIT 1",[employee_code.trim()]);if(duplicate.length)return json({error:"Kode karyawan sudah digunakan."},409);
+  for(const [table,id] of [["departments",department_id],["positions",position_id]]){if(id&&!(await rows("SELECT id FROM "+table+" WHERE id=? AND is_active=1",[id])).length)return json({error:"Departemen atau jabatan tidak aktif atau tidak ditemukan."},400);}
   if (!(await validEmployeeDestination(auth.userId!, company_id, brand_id, outlet_id))) return json({ error: "Akses atau relasi organisasi tidak valid." }, 403);
-  if (supervisor_id && !((await listMaster("employees",await employeeScope(auth.userId!),supervisor_id)).find(e=>e.companyId===company_id))) return json({ error: "Supervisor tidak valid." }, 400);
+  if (supervisor_id && !((await listMaster("employees",await employeeScope(auth.userId!),supervisor_id)).find(e=>e.companyId===company_id&&e.isActive))) return json({ error: "Supervisor tidak valid." }, 400);
   const row = await saveMaster("employees",{
-      employeeCode: employee_code,
-      fullName: full_name,
+      employeeCode: employee_code.trim(),
+      fullName: full_name.trim(),
       email: email || null,
       phone: phone || null,
       nik: nik || null,
@@ -72,7 +76,7 @@ export async function POST(req: NextRequest) {
       departmentId: department_id || null,
       positionId: position_id || null,
       supervisorId: supervisor_id || null,
-      isActive: is_active ?? true,
+      isActive: employment_status === 'ACTIVE',
     },await employeeScope(auth.userId!));
   if (!row) return json({error:"Not found"},404);
   return json({ data: row }, 201);

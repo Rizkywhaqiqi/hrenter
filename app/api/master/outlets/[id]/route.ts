@@ -13,7 +13,7 @@ export async function PUT(
   if (auth.error) return json({ error: auth.error }, auth.status || 403);
   if (!(await isSystemAdmin(auth.userId!))) return json({ error: "Forbidden" }, 403);
 
-  const body = await req.json();
+  const body = await req.json().catch(()=>null);if(!body||typeof body!=="object")return json({error:"Data tidak valid."},400);
   const { code, name, company_id, brand_id, address, phone, is_active } = body;
 
   if (!code || !name) {
@@ -35,6 +35,8 @@ export async function PUT(
     );
   }
 
+  const outletId=(await params).id;
+  if((await rows("SELECT 1 FROM employees WHERE outlet_id=? AND (company_id<>? OR brand_id<>?) LIMIT 1",[outletId,company_id,brand_id])).length)return json({error:"Outlet masih memiliki karyawan. Pindahkan penempatan karyawan sebelum mengubah Brand/CV."},409);
   const row = await saveMaster("outlets",{
       code,
       name,
